@@ -20,23 +20,44 @@ class MaxFlow:
 
     def getMaxFlow(self):
         #find augmenting path from s to t
-        augment_path = self.findAugmentPath()
-        print(augment_path)
+        augment_paths = self.findAugmentPaths()
+        print(augment_paths)
+        print("")
+        augment_path = []
+        if (augment_paths != []):
+            augment_path = augment_paths[0]
+            for i in range(1, len(augment_paths)):
+                if (len(augment_paths[i]) < len(augment_path)):
+                    augment_path = augment_paths[i]
+
         # keep updating residual graph while 
         # an augmenting path still exists
         while (len(augment_path) > 0):
-            min_cap = augment_path[0] #flow along augment path
-
+            #find min capacity edge 
+            # from found augmenting path
+            min_cap = None
+            for i in range(len(augment_path) - 1):
+                if (min_cap == None or self.res_graph[augment_path[i], augment_path[i+1]] < min_cap):
+                    min_cap = self.res_graph[augment_path[i], augment_path[i+1]]
+            
             #update residual graph
-            for i in range(1, len(augment_path) - 1):
+            for i in range(0, len(augment_path) - 1):
                 self.res_graph[augment_path[i], augment_path[i + 1]] = self.res_graph[augment_path[i], augment_path[i + 1]] - min_cap
 
-            #find new augmenting path
-            augment_path = self.findAugmentPath()
-            print(augment_path)
+            #print(min_cap, ', ', augment_path)
 
-        #get all vertices in the S cut where s in S
-        #cut[i] = 1 if vertex i is in the cut S, else 0
+            #find new augmenting path
+            augment_paths = self.findAugmentPaths()
+            print(augment_paths)
+            print("")
+            augment_path = []
+            if (augment_paths != []):
+                augment_path = augment_paths[0]
+                for i in range(1, len(augment_paths)):
+                    if (len(augment_paths[i]) < len(augment_path)):
+                        augment_path = augment_paths[i]
+
+
         cut = [0]*self.graph_length 
         self.getCutEdges(self.s, cut)
         #print(cut)
@@ -80,44 +101,41 @@ class MaxFlow:
     # performs a DFS over the residual graph
     # @returns [flow, vert1, vert2,...vertn] if a path from s to t exists, 
     #          []                            if no path exists
-    def findAugmentPath(self):
+    def findAugmentPaths(self):
         # set first element of path as the flow along the path
-        path = [None]
+        paths = []
+        path = []
         # set of visited vertices
         visited = set()
-        path = self.augmentPathHelper(self.s, deepcopy(path), visited)
-        return path
+        self.augmentPathHelper(self.s, paths, deepcopy(path), visited)
+        return paths
 
 
-    def augmentPathHelper(self, currVertex, path, visited):
+    def augmentPathHelper(self, currVertex, paths, path, visited):
     
         if (currVertex == self.t):
             # path to t has been found case
             path.append(self.t)
-            return path
+            paths.append(path)
         else:
             # only keep searching if 
             # currVertex has not been searched yet
-            if (not (currVertex in visited)):
-                visited.add(currVertex)
-
+            if ((currVertex in visited) == False):
                 #recurse down residual looking for a path
-                for i in range(self.graph_length):
+                for i in range(1, self.graph_length):
+                    # print(path, ", ", currVertex, ", ", i, ", ", self.res_graph[currVertex, i])
+                    # if ("" + str(path) +", " + str(currVertex)+ ", "+ str(i)+ ", "+ str(self.res_graph[currVertex, i]) == "[0, 1], 3, 5, 20"):
+                    #     print("help")
+                    #     x = 10
+
                     if (self.res_graph[currVertex, i] > 0):
-                    # update smallest capacity edge along path => flow along path
-                        if ((path[0] == None) or (self.res_graph[currVertex, i] < path[0])):
-                            path[0] = self.res_graph[currVertex, i]
-                            
+
+                        copy_visited = deepcopy(visited)
+                        copy_visited.add(currVertex)
                         copy_path = deepcopy(path)
                         copy_path.append(currVertex)
+                        self.augmentPathHelper(i, paths, copy_path, copy_visited)
 
-                        foundPath = self.augmentPathHelper(i, copy_path, visited)
-
-                        if (foundPath != []):
-                            return foundPath
-                
-        # returned if no path from s to t     
-        return []
     
 
 
@@ -139,4 +157,14 @@ class MaxFlow:
 #                        [0,0,0,0,0,10],
 #                        [0,0,0,6,0,10],
 #                        [0,0,0,0,0,0]]))
+# print(mf.getMaxFlow())
+matrix = np.array([[0,16,13,0,0,0],
+                            [0,0,10,12,0,0],
+                            [0,4,0,0,14,0],
+                            [0,0,9,0,0,20],
+                            [0,0,0,7,0,4],
+                            [0,0,0,0,0,0]])
+print(matrix[3,5])
+print(MaxFlow(matrix).getMaxFlow())
+# mf = MaxFlow(matrix)
 # print(mf.getMaxFlow())
