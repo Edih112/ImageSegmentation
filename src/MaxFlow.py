@@ -8,21 +8,17 @@ class MaxFlow:
     #@param graph is an input numpy nxn matrix, where the first elementon diagonal is s
     # and the last element on the diagonal is t, 
     # and the rest of the graph is the adjacency matrix of the flow network
-    def __init__(self, graph):
+    def __init__(self, graph, s, t):
         self.graph = graph
         self.graph_length = graph.shape[0]
-        self.s = 0 #tap node
-        self.t = self.graph_length - 1 #sink node
+        self.s = s #tap node
+        self.t = t #sink node
         self.res_graph = deepcopy(graph) #residual graph
-        print("constructed")
-
-
 
     def getMaxFlow(self):
         #find augmenting path from s to t
         augment_paths = self.findAugmentPaths()
-        print(augment_paths)
-        print("")
+
         augment_path = []
         if (augment_paths != []):
             augment_path = augment_paths[0]
@@ -44,12 +40,9 @@ class MaxFlow:
             for i in range(0, len(augment_path) - 1):
                 self.res_graph[augment_path[i], augment_path[i + 1]] = self.res_graph[augment_path[i], augment_path[i + 1]] - min_cap
 
-            #print(min_cap, ', ', augment_path)
-
             #find new augmenting path
             augment_paths = self.findAugmentPaths()
-            print(augment_paths)
-            print("")
+
             augment_path = []
             if (augment_paths != []):
                 augment_path = augment_paths[0]
@@ -60,9 +53,6 @@ class MaxFlow:
 
         cut = [0]*self.graph_length 
         self.getCutEdges(self.s, cut)
-        #print(cut)
-
-        #return the max flow
         return self.cutEdgeCapacitySum(cut)
     
 
@@ -158,13 +148,5 @@ class MaxFlow:
 #                        [0,0,0,6,0,10],
 #                        [0,0,0,0,0,0]]))
 # print(mf.getMaxFlow())
-matrix = np.array([[0,16,13,0,0,0],
-                            [0,0,10,12,0,0],
-                            [0,4,0,0,14,0],
-                            [0,0,9,0,0,20],
-                            [0,0,0,7,0,4],
-                            [0,0,0,0,0,0]])
-print(matrix[3,5])
-print(MaxFlow(matrix).getMaxFlow())
 # mf = MaxFlow(matrix)
 # print(mf.getMaxFlow())
