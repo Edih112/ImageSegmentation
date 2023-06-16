@@ -24,22 +24,62 @@ class GrayScaleImg:
         if (self.adjList == []):
             # take care of s to vertex edges
             s = {}
+            cols = self.intensities.shape[1]
+            rows = self.intensities.shape[0]
             # remember that id = 0 is assigned to s, so
             # id's for pixels starts from 1
             id = 0
             # loop over all pixels in img
-            for i in range(0, self.intensities.shape[0]):
-                for j in range(0, self.intensities.shape[1]):
+            for i in range(0, rows):
+                for j in range(0, cols):
                     id += 1
                     s[id] = regionalPenalty(self.intensities[i, j], True)
+            
+            self.adjList.append(s)
 
             # now add all u-v edges for u,v in P, where P = set of pixels
             id = 0
-            for i in range(0, self.intensities.shape[0]):
-                for j in range(0, self.intensities.shape[1]):
+            for i in range(0, rows):
+                for j in range(0, cols):
                     id += 1
+                    id_adj = {}
+                    curr_pixel_intensity = self.intensities[i, j]
                     #our id increases along columns and down rows,
-                    #need to be able to get id of the 4 adjacent pixels to each pixel
+                    #look at the 4 adjacent pixels
+                    if ((id % cols) != 1):
+                        # pixel "id" not on left edge, can check left neighbor
+                        left_id = id - 1
+                        left_pixel_intensity = self.intensities[i, j - 1]
+                        id_adj[left_id] = separationPenalty(curr_pixel_intensity, left_pixel_intensity)
+                        
+                    if (not (id <= cols)):
+                        # pixel "id" not on top edge can check top neighbor
+                        top_id = id - cols
+                        top_pixel_intensity = self.intensities[i - 1, j]
+                        id_adj[top_id] = separationPenalty(curr_pixel_intensity, top_pixel_intensity)
+
+                    if (not (id > rows * cols - cols)):
+                        # pixel "id" not on bottom edge can check bottom neighbor
+                        bottom_id = id + cols
+                        bottom_pixel_intensity = self.intensities[i + 1, j]
+                        id_adj[bottom_id] = separationPenalty(curr_pixel_intensity, bottom_pixel_intensity)
+
+                    if ((id % cols) != 0):
+                        # pixel "id" not on right edge can check right neighbor
+                        right_id = id + 1
+                        right_pixel_intensity = self.intensities[i, j + 1]
+                        id_adj[right_id] = separationPenalty(curr_pixel_intensity, right_pixel_intensity)
+
+                    # take care of edge to t
+                    t = rows*cols + 1
+                    id_adj[t] = regionalPenalty(curr_pixel_intensity, False)
+
+                    self.adjList.append(id_adj)
+            # add t adjacency list
+            self.adjList.append({})
+        return self.adjList
+
+                    
 
     #DO NOT CALL THIS FUNCTION creates adjacency matrix from image 
     #need to add size limit as this fails for most images
@@ -99,8 +139,8 @@ class GrayScaleImg:
 #calculates B_{p,q}
 def separationPenalty(pixel_p, pixel_q):
     sigma = 20
-    Ip = pixel_p
-    Iq = pixel_q
+    Ip = int(pixel_p)
+    Iq = int(pixel_q)
     Bpq = np.exp(-1*((Ip-Iq)*(Ip-Iq))/(2*sigma*sigma))
     return Bpq
 
