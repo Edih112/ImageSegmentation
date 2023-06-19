@@ -1,7 +1,8 @@
-from MaxFlow import MaxFlowAdjList
+from FordFulkerson import FordFulkerson
 from ProcessImage import GrayScaleImg
 import numpy as np
 from PIL import Image
+from Dinics2 import Dinics2
 
 
 
@@ -13,7 +14,8 @@ gs_img = GrayScaleImg(filename)
 flowNet = gs_img.getAdjList()
 #print(flowNet)
 
-mf_finder = MaxFlowAdjList(flowNet, 0, len(flowNet) - 1)
+mf_finder = FordFulkerson(flowNet, 0, len(flowNet) - 1)
+print(mf_finder.getMaxFlow())
 min_cut = mf_finder.getMinCut()
 #print(min_cut)
 img_copy = Image.open(filename).convert('L')

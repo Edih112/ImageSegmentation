@@ -1,13 +1,10 @@
 
 import numpy as np
 from copy import deepcopy
-
-# will need to create a class to abstract away the representation of a flow network
-class FlowNetGraph:
-    pass
+from collections import deque
 
 
-class MaxFlowAdjList: 
+class FordFulkerson: 
     #@param graph is an input adjacency list, where graph[i] is a pair (vertex_j, w) 
     #             that defines the edge i->j with weight w
     #             Additionally, for simplicity no numpy arrays are used for this representation, 
@@ -32,146 +29,113 @@ class MaxFlowAdjList:
 
     # NEED to make this capcity scaling, otherwise runtime is painful
     def getMaxFlow(self):
-        if (self.maxFlow == None):
+        la = 2048
+        while (la >= 1):
             #find augmenting path from s to t
-            augment_path = self.findAugmentPaths()
+            augment_path = self.findAugmentPaths(la)
+
+            count = 0
 
             # keep updating residual graph while 
             # an augmenting path still exists
-            while (len(augment_path) > 0):
-                # find min capacity edge 
-                # from found augmenting path
+            while (len(augment_path) > 1):
+                count += 1
+                # get max flow along path which is first element value
+                min_cap = augment_path[0]
                 
-                min_cap = None
-                for i in range(len(augment_path) - 1):
-                    if (min_cap == None or self.res_graph[augment_path[i]][augment_path[i+1]] < min_cap):
-                        min_cap = self.res_graph[augment_path[i]][augment_path[i+1]]
-
-                # print(augment_path)
-                # print("")
-
-                #update residual graph
-                for i in range(0, len(augment_path) - 1):
+                #update residual graph, augment path vertices are index 1=>end
+                for i in range(1, len(augment_path) - 1):
                     self.res_graph[augment_path[i]][augment_path[i + 1]] = self.res_graph[augment_path[i]][augment_path[i + 1]] - min_cap
 
+                augment_path.clear()
                 #find new augmenting path
-                augment_path = self.findAugmentPaths()
+                augment_path = self.findAugmentPaths(la)
 
-            self.cut = [0]*self.graph_length 
-            self.getCutEdgesIterative(self.cut)
-            self.maxFlow = self.cutEdgeCapacitySum(self.cut)
+            print(la, "lambda done ", count, " paths found")
+            la = la // 2
+        
+        self.cut = self.getCut()
+        self.maxFlow = self.cutEdgeCapacitySum(self.cut)
+
         return self.maxFlow
+    
+    def getCut(self):
+        queue = deque()
+        visited = [0]*self.graph_length
+        queue.append(self.s)
+
+        while queue:
+            vertex = queue.popleft()
+            visited[vertex] = 1
+
+            for neighbor, weight in self.res_graph[vertex].items():
+                if (weight > 0 and visited[neighbor] == 0):
+                    queue.append(neighbor)
+        return visited
+    
 
     #@params cut: the list of all vertices in the S cut,
     #             where cut[i] = 1 if vertex i is in the cut S, else 0
     def cutEdgeCapacitySum(self, cut):
-        cut_set = set()
-        
-        #transfer all vertices in cut to a set
-        for i in range(0, len(cut)):
-            if (cut[i] == 1):
-                cut_set.add(i)
-
         #find max flow, these are all edges that are reachable within the set S
         max_flow = 0
-
-        for vertex in cut_set:
-            for i, w in self.res_graph[vertex].items():
-                if (not (i in cut_set)):
-                    max_flow += self.graph[vertex][i]
+        for i in range(len(cut)):
+            if cut[i] == 1:
+                for n, w in self.res_graph[i].items():
+                    if cut[n] == 0:
+                        max_flow += self.graph[i][n]
 
         return max_flow
-
-
-    def getCutEdgesIterative(self, cut):
-        queue = [self.s]
-
-        while queue:
-            vert = queue.pop(0)
-            if (cut[vert] == 0):
-                cut[vert] = 1
-                for neighbor, weight in self.res_graph[vert].items():
-                    if (weight > 0):
-                        queue += [neighbor]
-
-    # searches through residual graph to get all vertices in 
-    # the cut S in format where cut[i] = 1 if vertex i is in S
-    # else cut[i] = 0
-    def getCutEdgesRecursive(self, curr_edge, cut):
-        if (cut[curr_edge] == 0):
-            cut[curr_edge] = 1
-
-            for j, w in self.res_graph[curr_edge].items():
-                if (w > 0):
-                    self.getCutEdgesRecursive(j, cut)
-
-            # for i in range(1, self.graph_length):
-            #     if (self.res_graph[curr_edge, i] > 0):
-            #         self.getCutEdges(i, cut)
-
     
     # performs a DFS over the residual graph
     # @returns [flow, vert1, vert2,...vertn] if a path from s to t exists, 
     #          []                            if no path exists
-    def findAugmentPaths(self):
-        paths = self.augmentPathHelperIterativeBFS(self.s)
+    def findAugmentPaths(self, minFlow):
+        path = self.augmentPathHelperIterativeBFS(self.s, minFlow)
         #self.augmentPathHelperRecursive(self.s, paths, deepcopy(path), visited)
-        return paths
-    
-    def augmentPathHelperRecursive(self, currVertex, paths, path, visited):
-    
-        if (currVertex == self.t):
-            # path to t has been found case
-            path.append(self.t)
-            paths.append(path)
-        else:
-            # only keep searching if 
-            # currVertex has not been searched yet
-            if ((currVertex in visited) == False):
-                #recurse down residual looking for a path
-                for j, w in self.res_graph[currVertex].items():
-                    edge_weight = w
-                    dest_vert = j
-                    if (edge_weight > 0):
-                        copy_visited = deepcopy(visited)
-                        copy_visited.add(currVertex)
-                        copy_path = deepcopy(path)
-                        copy_path.append(currVertex)
-                        self.augmentPathHelperRecursive(dest_vert, paths, copy_path, copy_visited)
+        return path
 
-    def augmentPathHelperIterativeBFS(self, startVertex):
-        visited = set()
-        queue = []
+    # returns path if one is found, otherwise returns a single elemtn list
+    # containing the set of all visited nodes, ie the min cut when no path is found
+    def augmentPathHelperIterativeBFS(self, startVertex, minFlow):
+        queue = deque()
         searched = {}
 
-        queue.append((startVertex, None))
-        visited.add(startVertex)
+        queue.append((startVertex, -1))
 
         # while queue is not empty
         while queue:
-            curr, prev = queue.pop(0)
-            if curr not in searched:
-                searched[curr] = prev
+            curr, prev = queue.popleft()
+            searched[curr] = prev
 
-                if (curr == self.t):
-                    result = [curr]
-                    while prev is not None:
-                        result.append(prev)
-                        prev = searched[prev]
-                    return result[::-1]
-                else:
-                    # if (curr >= len(self.res_graph)):
-                    #     #print(curr, ", " , len(self.res_graph))
-                    #     break
-    
-                    for neighbor, weight in self.res_graph[curr].items():
-                        if (weight > 0):
-                            queue += [(neighbor, curr)]
+            if (curr == self.t):
+                # build up augment path, finding maxflow along path at the same time
+                min_cap = self.res_graph[prev][curr]
+                result = [curr]
+                # while a previosu vertex exists
+                while prev != -1:
+                    # update max flow along path
+                    if (min_cap > self.res_graph[prev][curr]):
+                        min_cap = self.res_graph[prev][curr]
+                    # add previous vertex to list
+                    result.append(prev)
+                    curr = prev
+                    prev = searched[prev]
+
+                # add maxflow to list
+                result.append(min_cap)
+                # return the reversed list, of [maxFlow, v1, v2, ..., vn]
+                return result[::-1]
+            else:
+                for neighbor, weight in self.res_graph[curr].items():
+                    if (weight >= minFlow and (neighbor not in searched.keys())):
+                        queue.append((neighbor, curr))
         return []
 
 
 
 
+# all algoriths should use adjacency list
 class MaxFlowAdjMatrix: 
     #@param graph is an input numpy nxn matrix, where the first elementon diagonal is s
     # and the last element on the diagonal is t, 
