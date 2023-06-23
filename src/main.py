@@ -9,7 +9,8 @@ from Dinics2 import Dinics2
 #NEED to add adjacency matrix support for flow network,
 # graph is way too sparse otherwise
 
-filename = "images/hooman100x50.png"
+
+filename = "images/camera_man200x200.png"
 gs_img = GrayScaleImg(filename)
 flowNet = gs_img.getAdjList()
 #print(flowNet)
