@@ -1,6 +1,6 @@
 import unittest
 import numpy as np
-from FordFulkerson import FordFulkerson, MaxFlowAdjMatrix
+from FordFulkerson import FordFulkerson
 from Dinics2 import Dinics2
 
 class MaxFlowTest(unittest.TestCase):

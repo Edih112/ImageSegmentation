@@ -29,7 +29,7 @@ class FordFulkerson:
 
     # NEED to make this capcity scaling, otherwise runtime is painful
     def getMaxFlow(self):
-        la = 2048
+        la = 4096*2*2*2*2
         while (la >= 1):
             #find augmenting path from s to t
             augment_path = self.findAugmentPaths(la)
@@ -63,9 +63,11 @@ class FordFulkerson:
         queue = deque()
         visited = [0]*self.graph_length
         queue.append(self.s)
-
+        count = 0 # for print purposes only
         while queue:
+            count += 1
             vertex = queue.popleft()
+            #print(count, " in cut ", vertex, ", ", self.graph_length)
             visited[vertex] = 1
 
             for neighbor, weight in self.res_graph[vertex].items():

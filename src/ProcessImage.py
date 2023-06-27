@@ -15,7 +15,8 @@ class GrayScaleImg:
     def __init__(self, img_filename):
         self.img = Image.open(img_filename).convert('L')
         self.intensities = np.array(self.img)
-        self.histogram = []
+        self.forePDF = []
+        self.backPDF = []
         self.adjMatrix = None
         self.adjList = []
 
@@ -81,47 +82,71 @@ class GrayScaleImg:
                             
 
     def intensityHistogram(self):
-        if (self.histogram == []):
-            self.histogram = [0]*256
+        if (self.backPDF == [] or self.forePDF == []):
+            histogram = [0]*256
             width = int(self.intensities.shape[0])
             height = int(self.intensities.shape[1])
-            print(height)
-            print(width)
+            # print(height)
+            # print(width)
 
             for v in range(0, height):
                 for u in range(0, width- 1):
                     pixelIntensity = int(self.intensities[u, v])
-                    self.histogram[pixelIntensity] += 1
+                    histogram[pixelIntensity] += 1
 
-        return self.histogram
+            # calculate the median
+            numPixels = 0
+            median = 0
+            while numPixels < (width * height) / 2:
+                numPixels = numPixels + histogram[median]
+                median += 1
+            foreGroundPixels = numPixels
+            backGroundPixels = (width * height) - numPixels
+            # create back and foreground histograms splitting on median
+            count = 0
+            self.forePDF = [0]*256
+            for i in range(0, median + 1):
+                count = count + histogram[i]
+                self.forePDF[i] = float(count) / foreGroundPixels
+            count = 0
+            self.backPDF = [0]*256
+            for i in range(median + 1, 256):
+                count = count + histogram[i]
+                self.backPDF[i] = count / backGroundPixels
+
+
+
             
     #returns regional penalty based on 5-6 in paper by Boykov
     def regionalPenalty(self, intensity, inObject):
         self.intensityHistogram()
-        width = int(self.intensities.shape[0])
-        height = int(self.intensities.shape[1])
+        # width = int(self.intensities.shape[0])
+        # height = int(self.intensities.shape[1])
 
-        count = 0
-        sep = 0
-        for i in range(256):
-            count += self.histogram[i]
-            if (count > (height * width) / 2):
-                sep = i
-                break
+        pBack = self.backPDF[intensity]
+        pFore = self.forePDF[intensity]
 
-        penalty = 0
-        if (intensity < sep):
-            #dark
-            if (inObject):
-                penalty = 0
-            else:
-                penalty = 10000000000 #to represent infinity
+        penalty = 10000000 # as infinity
+        if (inObject):
+            if (pFore != 0):
+                penalty = -1 * np.log(pFore)
         else:
-            #light
-            if (inObject):
-                penalty = 0.1
-            else:
-                penalty = 0
+            if (pBack != 0):
+                penalty = -1 * np.log(pBack)
+
+        # if (intensity < 128):
+        #     #dark
+        #     if (inObject):
+        #         penalty = 0
+        #     else:
+        #         penalty = 10000000000 #to represent infinity
+        # else:
+        #     #light
+        #     if (inObject):
+        #         penalty = 0.1
+        #     else:
+        #         penalty = 0
+        #print("penalty ", penalty)
         return 100*penalty
         
 # test = GrayScaleImg(img_arr)
@@ -130,7 +155,7 @@ class GrayScaleImg:
 #calculates B_{p,q}
 # sigma = 15 works well on Daisy_field
 def separationPenalty(pixel_p, pixel_q):
-    sigma = 13
+    sigma = 30
     Ip = int(pixel_p)
     Iq = int(pixel_q)
     Bpq = 100*np.exp(-1*(np.power((Ip-Iq), 2)/(2*np.power(sigma, 2))))

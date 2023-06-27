@@ -10,14 +10,15 @@ from Dinics2 import Dinics2
 # graph is way too sparse otherwise
 
 
-filename = "images/camera_man200x200.png"
+filename = "images/people90x60.png"
 gs_img = GrayScaleImg(filename)
 flowNet = gs_img.getAdjList()
+print("image processed")
 #print(flowNet)
 
 mf_finder = FordFulkerson(flowNet, 0, len(flowNet) - 1)
-print(mf_finder.getMaxFlow())
 min_cut = mf_finder.getMinCut()
+print("algorithm complete")
 #print(min_cut)
 img_copy = Image.open(filename).convert('L')
 img_copy_arr = np.array(img_copy)
